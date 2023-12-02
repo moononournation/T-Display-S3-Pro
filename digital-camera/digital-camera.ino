@@ -21,10 +21,12 @@
 #include "camera_pins.h"
 #define PREVIEW_QUALITY 6 // 1-63, 1 is the best
 #define PREVIEW_SIZE FRAMESIZE_HVGA
+#define PREVIEW_WIDTH 480
+#define PREVIEW_HEIGHT 320
 #define SNAP_QUALITY 6 // 1-63, 1 is the best
-// #define SNAP_SIZE FRAMESIZE_UXGA
+#define SNAP_SIZE FRAMESIZE_UXGA
 // #define SNAP_SIZE FRAMESIZE_QXGA
-#define SNAP_SIZE FRAMESIZE_QSXGA
+// #define SNAP_SIZE FRAMESIZE_QSXGA
 
 #include <SD.h>
 #define SD_SCK 18
@@ -63,11 +65,13 @@ uint16_t fileIdx = 0;
 int i = 0;
 sensor_t *s;
 camera_fb_t *fb = 0;
-size_t file1_len;
-size_t file2_len;
 uint8_t *output_buf;
 uint8_t *file1_buf;
+size_t file1_len;
 uint8_t *file2_buf;
+size_t file2_len;
+uint8_t *file3_buf;
+size_t file3_len;
 
 void setup()
 {
@@ -223,7 +227,7 @@ void setup()
   {
     Serial.println("output_buf malloc failed!");
   }
-  file2_buf = (uint8_t *)malloc(2560 * 1920 * 2 / 8); // hack
+  file1_buf = (uint8_t *)malloc(2560 * 1920 * 2 / 8); // hack: don't use this memory area
   file1_buf = (uint8_t *)malloc(2560 * 1920 * 2 / 8);
   if (!file1_buf)
   {
@@ -233,6 +237,11 @@ void setup()
   if (!file2_buf)
   {
     Serial.println("file2_buf malloc failed!");
+  }
+  file3_buf = (uint8_t *)malloc(2560 * 1920 * 2 / 8);
+  if (!file3_buf)
+  {
+    Serial.println("file3_buf malloc failed!");
   }
 }
 
@@ -264,7 +273,7 @@ esp_err_t cam_init()
   config.fb_location = CAMERA_FB_IN_PSRAM;
   config.frame_size = SNAP_SIZE;
   config.jpeg_quality = SNAP_QUALITY;
-  config.fb_count = 1;
+  config.fb_count = 2;
 
   // camera init
   return esp_camera_init(&config);
@@ -382,7 +391,11 @@ void findNextFileIdx()
 void saveFilesTask(void *parameter)
 {
   saveFile(file1_buf, file1_len);
+  gfx->fillRect(470, 1, 10, 72, BLACK);
   saveFile(file2_buf, file2_len);
+  gfx->fillRect(470, 75, 10, 72, BLACK);
+  saveFile(file3_buf, file3_len);
+  gfx->fillRect(470, 149, 10, 72, BLACK);
   vTaskDelete(NULL);
 }
 
@@ -410,32 +423,46 @@ void saveFile(uint8_t *buf, size_t len)
   findNextFileIdx();
 }
 
-void skipFrame()
-{
-  fb = esp_camera_fb_get();
-  esp_camera_fb_return(fb);
-  fb = NULL;
-}
 
 void snap()
 {
+  gfx->fillScreen(BLACK);
+
   // s->set_hmirror(s, false);
   // s->set_vflip(s, true);
   s->set_quality(s, SNAP_QUALITY);
   s->set_framesize(s, SNAP_SIZE);
-  skipFrame();
+  // skipFrame
+  fb = esp_camera_fb_get();
+  esp_camera_fb_return(fb);
+  fb = esp_camera_fb_get();
+  esp_camera_fb_return(fb);
+  fb = esp_camera_fb_get();
+  esp_camera_fb_return(fb);
+  fb = esp_camera_fb_get();
+  esp_camera_fb_return(fb);
+  fb = esp_camera_fb_get();
+  esp_camera_fb_return(fb);
 
   fb = esp_camera_fb_get();
   esp_camera_fb_return(fb);
   file1_len = fb->len;
   memcpy(file1_buf, fb->buf, file1_len);
+  gfx->fillRect(470, 1, 10, 72, RED);
   esp_camera_fb_return(fb);
-  fb = NULL;
 
   fb = esp_camera_fb_get();
   esp_camera_fb_return(fb);
   file2_len = fb->len;
   memcpy(file2_buf, fb->buf, file2_len);
+  gfx->fillRect(470, 75, 10, 72, RED);
+  esp_camera_fb_return(fb);
+
+  fb = esp_camera_fb_get();
+  esp_camera_fb_return(fb);
+  file3_len = fb->len;
+  memcpy(file3_buf, fb->buf, file3_len);
+  gfx->fillRect(470, 149, 10, 72, RED);
   esp_camera_fb_return(fb);
   fb = NULL;
 
@@ -443,7 +470,6 @@ void snap()
   // s->set_vflip(s, true);
   s->set_quality(s, PREVIEW_QUALITY);
   s->set_framesize(s, PREVIEW_SIZE);
-  skipFrame();
 
   xTaskCreate(
       saveFilesTask,   /* Task function. */
@@ -459,9 +485,6 @@ void loop()
   if (digitalRead(BTN1_PIN) == LOW)
   {
     Serial.println("Start snap!");
-
-    gfx->fillScreen(BLACK);
-
     snap();
   }
   else
@@ -489,7 +512,7 @@ void loop()
       jpeg_dec_process(jpeg_dec, jpeg_io);
       jpeg_dec_close(jpeg_dec);
 
-      gfx->draw16bitBeRGBBitmap(0, -(320 - 222) / 2, (uint16_t *)output_buf, 480, 320);
+      gfx->draw16bitBeRGBBitmap(-10, (222 - PREVIEW_HEIGHT) / 2, (uint16_t *)output_buf, PREVIEW_WIDTH, PREVIEW_HEIGHT);
 
       // Serial.printf("Liveview decode used: %d\n", millis() - start_ms);
       esp_camera_fb_return(fb);
