@@ -5,7 +5,7 @@
  * Dependent libraries:
  * Arduino_GFX: https://github.com/moononournation/Arduino_GFX.git
  * ESP32_JPEG: https://github.com/esp-arduino-libs/ESP32_JPEG.git
- * XPowersLib: https://github.com/lewisxhe/XPowersLib
+ * XPowersLib: https://github.com/lewisxhe/XPowersLib.git
  ******************************************************************************/
 
 #include <WiFi.h>
@@ -62,7 +62,6 @@ Arduino_GFX *gfx = new Arduino_ST7796(bus, 47 /* RST */, 1 /* rotation */, true 
 char tmpStr[1024];
 char nextFilename[31];
 uint16_t fileIdx = 0;
-int i = 0;
 sensor_t *s;
 camera_fb_t *fb = 0;
 uint8_t *output_buf;
@@ -78,7 +77,7 @@ void setup()
   WiFi.mode(WIFI_OFF);
 
   Serial.begin(115200);
-  Serial.setDebugOutput(true);
+  // Serial.setDebugOutput(true);
 
   pinMode(BTN1_PIN, INPUT_PULLUP);
   pinMode(BTN2_PIN, INPUT_PULLUP);
@@ -423,7 +422,6 @@ void saveFile(uint8_t *buf, size_t len)
   findNextFileIdx();
 }
 
-
 void snap()
 {
   gfx->fillScreen(BLACK);
@@ -493,6 +491,8 @@ void loop()
     if (!fb)
     {
       Serial.println("Camera capture failed!");
+      esp_camera_fb_return(fb);
+      fb = NULL;
     }
     else
     {
@@ -519,6 +519,4 @@ void loop()
       fb = NULL;
     }
   }
-
-  i++;
 }
