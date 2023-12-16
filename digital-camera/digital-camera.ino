@@ -85,7 +85,7 @@ void setup()
 
   SPI.begin(SD_SCK, SD_MISO, SD_MOSI);
 
-  gfx->begin();
+  gfx->begin(80000000);
   gfx->fillScreen(BLACK);
 
 #ifdef GFX_BL
@@ -151,12 +151,12 @@ void setup()
   // s->set_contrast(s, 1);
   // s->set_saturation(s, 1);
   // s->set_saturation(s, 4);
-  // s->set_gainceiling(s, (gainceiling_t)511);
+  s->set_gainceiling(s, (gainceiling_t)511);
   // s->set_sharpness(s, 1);
   // s->set_sharpness(s, 3);
-  // s->set_aec2(s, true);
+  s->set_aec2(s, true);
   // s->set_denoise(s, true);
-  // s->set_lenc(s, true);
+  s->set_lenc(s, true);
   // s->set_hmirror(s, true);
   // s->set_vflip(s, true);
   s->set_quality(s, PREVIEW_QUALITY);
@@ -221,12 +221,11 @@ void setup()
   out_info = (jpeg_dec_header_info_t *)calloc(1, sizeof(jpeg_dec_header_info_t));
 
   // allocate buffers
-  output_buf = (uint8_t *)malloc(480 * 320);
+  output_buf = (uint8_t *)heap_caps_aligned_alloc(16, 480 * 320 * 2, MALLOC_CAP_DEFAULT);
   if (!output_buf)
   {
     Serial.println("output_buf malloc failed!");
   }
-  file1_buf = (uint8_t *)malloc(2560 * 1920 * 2 / 8); // hack: don't use this memory area
   file1_buf = (uint8_t *)malloc(2560 * 1920 * 2 / 8);
   if (!file1_buf)
   {
@@ -389,12 +388,22 @@ void findNextFileIdx()
 
 void saveFilesTask(void *parameter)
 {
-  saveFile(file1_buf, file1_len);
-  gfx->fillRect(470, 1, 10, 72, BLACK);
-  saveFile(file2_buf, file2_len);
-  gfx->fillRect(470, 75, 10, 72, BLACK);
-  saveFile(file3_buf, file3_len);
-  gfx->fillRect(470, 149, 10, 72, BLACK);
+  if ((file1_len > file2_len) && (file1_len > file3_len))
+  {
+    Serial.printf("selected first snap.\n");
+    saveFile(file1_buf, file1_len);
+  }
+  else if (file2_len > file3_len)
+  {
+    Serial.printf("selected second snap.\n");
+    saveFile(file2_buf, file2_len);
+  }
+  else
+  {
+    Serial.printf("selected third snap.\n");
+    saveFile(file3_buf, file3_len);
+  }
+  gfx->fillRect(470, 0, 10, 222, BLACK);
   vTaskDelete(NULL);
 }
 
@@ -433,19 +442,20 @@ void snap()
   // skipFrame
   fb = esp_camera_fb_get();
   esp_camera_fb_return(fb);
-  fb = esp_camera_fb_get();
-  esp_camera_fb_return(fb);
-  fb = esp_camera_fb_get();
-  esp_camera_fb_return(fb);
-  fb = esp_camera_fb_get();
-  esp_camera_fb_return(fb);
-  fb = esp_camera_fb_get();
-  esp_camera_fb_return(fb);
+  // fb = esp_camera_fb_get();
+  // esp_camera_fb_return(fb);
+  // fb = esp_camera_fb_get();
+  // esp_camera_fb_return(fb);
+  // fb = esp_camera_fb_get();
+  // esp_camera_fb_return(fb);
+  // fb = esp_camera_fb_get();
+  // esp_camera_fb_return(fb);
 
   fb = esp_camera_fb_get();
   esp_camera_fb_return(fb);
   file1_len = fb->len;
   memcpy(file1_buf, fb->buf, file1_len);
+  Serial.printf("First snap: %d\n", file1_len);
   gfx->fillRect(470, 1, 10, 72, RED);
   esp_camera_fb_return(fb);
 
@@ -453,6 +463,7 @@ void snap()
   esp_camera_fb_return(fb);
   file2_len = fb->len;
   memcpy(file2_buf, fb->buf, file2_len);
+  Serial.printf("Second snap: %d\n", file2_len);
   gfx->fillRect(470, 75, 10, 72, RED);
   esp_camera_fb_return(fb);
 
@@ -460,6 +471,7 @@ void snap()
   esp_camera_fb_return(fb);
   file3_len = fb->len;
   memcpy(file3_buf, fb->buf, file3_len);
+  Serial.printf("Third snap: %d\n", file3_len);
   gfx->fillRect(470, 149, 10, 72, RED);
   esp_camera_fb_return(fb);
   fb = NULL;
