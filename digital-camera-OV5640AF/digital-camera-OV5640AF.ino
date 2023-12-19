@@ -161,7 +161,7 @@ void setup()
   // s->set_sharpness(s, 3);
   s->set_aec2(s, true);
   // s->set_denoise(s, true);
-  s->set_lenc(s, true);
+  // s->set_lenc(s, true);
   // s->set_hmirror(s, true);
   // s->set_vflip(s, true);
   s->set_quality(s, PREVIEW_QUALITY);
