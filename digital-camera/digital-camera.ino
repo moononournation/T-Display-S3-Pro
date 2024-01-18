@@ -490,6 +490,38 @@ void snap()
       NULL);           /* Task handle. */
 }
 
+void liveView()
+{
+  fb = esp_camera_fb_get();
+  if (!fb)
+  {
+    Serial.println("Camera capture failed!");
+    esp_camera_fb_return(fb);
+    fb = NULL;
+  }
+  else
+  {
+    // Create jpeg_dec
+    jpeg_dec_handle_t *jpeg_dec = jpeg_dec_open(&config);
+
+    // Set input buffer and buffer len to io_callback
+    jpeg_io->inbuf = fb->buf;
+    jpeg_io->inbuf_len = fb->len;
+
+    jpeg_dec_parse_header(jpeg_dec, jpeg_io, out_info);
+
+    jpeg_io->outbuf = output_buf;
+
+    jpeg_dec_process(jpeg_dec, jpeg_io);
+    jpeg_dec_close(jpeg_dec);
+
+    gfx->draw16bitBeRGBBitmap(-10, (222 - PREVIEW_HEIGHT) / 2, (uint16_t *)output_buf, PREVIEW_WIDTH, PREVIEW_HEIGHT);
+
+    esp_camera_fb_return(fb);
+    fb = NULL;
+  }
+}
+
 void loop()
 {
   if (digitalRead(BTN1_PIN) == LOW)
@@ -499,36 +531,6 @@ void loop()
   }
   else
   {
-    fb = esp_camera_fb_get();
-    if (!fb)
-    {
-      Serial.println("Camera capture failed!");
-      esp_camera_fb_return(fb);
-      fb = NULL;
-    }
-    else
-    {
-      // uint32_t start_ms = millis();
-
-      // Create jpeg_dec
-      jpeg_dec_handle_t *jpeg_dec = jpeg_dec_open(&config);
-
-      // Set input buffer and buffer len to io_callback
-      jpeg_io->inbuf = fb->buf;
-      jpeg_io->inbuf_len = fb->len;
-
-      jpeg_dec_parse_header(jpeg_dec, jpeg_io, out_info);
-
-      jpeg_io->outbuf = output_buf;
-
-      jpeg_dec_process(jpeg_dec, jpeg_io);
-      jpeg_dec_close(jpeg_dec);
-
-      gfx->draw16bitBeRGBBitmap(-10, (222 - PREVIEW_HEIGHT) / 2, (uint16_t *)output_buf, PREVIEW_WIDTH, PREVIEW_HEIGHT);
-
-      // Serial.printf("Liveview decode used: %d\n", millis() - start_ms);
-      esp_camera_fb_return(fb);
-      fb = NULL;
-    }
+    liveView();
   }
 }
