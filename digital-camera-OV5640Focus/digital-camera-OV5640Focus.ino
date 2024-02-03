@@ -26,7 +26,7 @@
 #define PREVIEW_SIZE FRAMESIZE_HVGA
 #define PREVIEW_WIDTH 480
 #define PREVIEW_HEIGHT 320
-#define SNAP_QUALITY 6 // 1-63, 1 is the best
+#define SNAP_QUALITY 8 // 1-63, 1 is the best
 #define SNAP_SIZE FRAMESIZE_UXGA
 // #define SNAP_SIZE FRAMESIZE_QXGA
 // #define SNAP_SIZE FRAMESIZE_QSXGA
@@ -158,7 +158,7 @@ void setup()
   // s->set_contrast(s, 1);
   // s->set_saturation(s, 1);
   // s->set_saturation(s, 4);
-  s->set_gainceiling(s, (gainceiling_t)511);
+  s->set_gainceiling(s, GAINCEILING_128X);
   // s->set_sharpness(s, 1);
   // s->set_sharpness(s, 3);
   s->set_aec2(s, true);
